@@ -78,8 +78,9 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
 
         # create a save action.
         # WORK AROUND: I can't figure out how to make gedit_document_save
-        # to work, so I used this idea from teh gedit-latex plugin.
+        # to work, so I used this idea from the gedit-latex plugin.
         self._save_action = self.window.get_ui_manager().get_action("/MenuBar/FileMenu/FileSaveMenu")
+        
         
         # Insert menu items
         self._insert_menu()
@@ -141,6 +142,15 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
         self._log_text_view.scroll_to_iter(iter, 0.0, False, 0.5, 0.5)
         return False
 
+    def _close_pdf(self,widget,event):
+        pass
+
+    def _get_synctex(self):
+        # Grab the synctex action.
+        ##
+        self._synctex = self.window.get_ui_manager().get_action("/MenuBar/ToolsMenu/ToolsOps_2/Synctex")
+        return False
+
 
     def _create_tex_command(self):
         program = "pdflatex"
@@ -162,7 +172,7 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
         # Construct the pdflatex command
         tex_command = self._create_tex_command().format(short_name,file_name)
 
-        # Run pdflatex after the document has finished saving
+        # Go to the file folder and run tex on the document
         os.chdir(file_folder)
         tex_return = os.system(tex_command)
 
@@ -171,17 +181,18 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
         log_text = log_file.read()
         log_file.close()
         self._process_log(log_text)
-        self._scroll_to_end()
         if tex_return == 0:
-           self.window.get_bottom_panel().set_property("visible",False)
-           #self._synctex.activate()
+            self.window.get_bottom_panel().set_property("visible",False)
+            self._synctex.activate()
         else:
-           self.window.get_bottom_panel().set_property("visible",True)
+            self._scroll_to_end()
+            self.window.get_bottom_panel().set_property("visible",True)
         return False
 
     def _run_latex(self,action,what):
         # Save the file and run latex
         ##
+        self._get_synctex()
         doc = self.window.get_active_document()
         mime = doc.get_mime_type()
         if mime == "text/x-tex":
