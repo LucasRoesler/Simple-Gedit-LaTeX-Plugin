@@ -83,8 +83,8 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
         
         # Insert menu items
         self._insert_menu()
-
-        tab = self.window.get_active_tab()
+        # Create the output panel
+        self._create_outputpanel()
 
     def do_deactivate(self):
         self._remove_menu()
@@ -117,19 +117,34 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
         # Make sure the manager updates
         manager.ensure_update()
 
-    def _create_outputpanel(self,log_text):
+    def _create_outputpanel(self):
         # Prepare output panel
         output_panel = Gtk.Builder()
         output_panel.add_from_string(output_panel_str)
-        log_buffer = output_panel.get_object('view').get_buffer()
-        log_buffer.set_text(log_text,-1)
+        log_text_view = output_panel.get_object('view')
+        self._log_text_view = log_text_view
+        self._log_widget = output_panel.get_object('output-panel')
 
-        bottom_widget = output_panel.get_object('output-panel')
+        # Insert panel
         panel = self.window.get_bottom_panel()
-        panel.remove_item(bottom_widget)
-        panel.add_item(bottom_widget,"TeX Log","TeX Log",None)
-        panel.activate_item(bottom_widget)
-        return output_panel
+        panel.add_item(self._log_widget,"TeX Log","TeX Log",None)
+        # And focus it
+        panel.activate_item(self._log_widget)
+        return False
+
+    def _process_log(self,log_text):
+        # Write the log file
+        log_buffer = self._log_text_view.get_buffer()
+        log_buffer.set_text(log_text,-1)
+        return False
+
+    def _scroll_to_end(self):
+        log_buffer = self._log_text_view.get_buffer()
+        iter = log_buffer.get_end_iter()
+        self._log_text_view.scroll_to_iter(iter, 0.0, False, 0.5, 0.5)
+        print iter
+        return False
+
 
     def _create_tex_command(self):
         delay = "sleep 1; "
@@ -161,7 +176,8 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
             log_file = open(file_folder + short_name + ".log","r")
             log_text = log_file.read()
             log_file.close()
-            self._create_outputpanel(log_text)
+            self._process_log(log_text)
+            self._scroll_to_end()
             
             if return_code == 0:
                 self.window.get_bottom_panel().set_property("visible",False)
