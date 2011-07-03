@@ -142,7 +142,6 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
         log_buffer = self._log_text_view.get_buffer()
         iter = log_buffer.get_end_iter()
         self._log_text_view.scroll_to_iter(iter, 0.0, False, 0.5, 0.5)
-        print iter
         return False
 
 
@@ -153,34 +152,41 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
         command = delay + program + ' ' + options
         return command
 
+    def _call_latex(self,widget,event):
+        doc = self.window.get_active_document()
+        # Get the file info
+        file_location = doc.get_uri_for_display()
+        file_name = doc.get_short_name_for_display()
+
+        # Format the file info for the pdflatex command
+        file_folder = file_location[:-len(file_name)]
+        short_name = file_name[:-4]
+        # Construct the pdflatex command
+        tex_command = self._create_tex_command().format(short_name,file_name)
+
+        # Run pdflatex after the document has finished saving
+        os.chdir(file_folder)
+        tex_return = os.system(tex_command)
+
+        # Add log to output panel
+        log_file = open(file_folder + short_name + ".log","r")
+        log_text = log_file.read()
+        log_file.close()
+        self._process_log(log_text)
+        self._scroll_to_end()
+        if tex_return == 0:
+           self.window.get_bottom_panel().set_property("visible",False)
+           #self._synctex.activate()
+        else:
+           self.window.get_bottom_panel().set_property("visible",True)
+        return False
+
     def _run_latex(self,action,what):
         doc = self.window.get_active_document()
         mime = doc.get_mime_type()
         if mime == "text/x-tex":
             self._save_action.activate()
-            # Get the file info
-            file_location = doc.get_uri_for_display()
-            file_name = doc.get_short_name_for_display()
-
-            # Format the file info for the pdflatex command
-            file_folder = file_location[:-len(file_name)]
-            short_name = file_name[:-4]
-            # Construct the pdflatex command
-            tex_command = self._create_tex_command().format(short_name,file_name)
-
-            # Run pdflatex
-            os.chdir(file_folder)
-            return_code = os.system(tex_command)
-
-            # Add log to output panel
-            log_file = open(file_folder + short_name + ".log","r")
-            log_text = log_file.read()
-            log_file.close()
-            self._process_log(log_text)
-            self._scroll_to_end()
-            
-            if return_code == 0:
-                self.window.get_bottom_panel().set_property("visible",False)
-                #self._synctex.activate()
-            else:
-                self.window.get_bottom_panel().set_property("visible",True)
+            latex = doc.connect("saved",self._call_latex)
+        else:
+            print "This is not a tex file"
+        return False
