@@ -20,8 +20,8 @@
 
 
 from gettext import gettext as _
-from gi.repository import GObject, Gtk, Gedit
-import os
+from gi.repository import GObject, Gtk, Gedit, Wnck, Gdk
+import os, re
 
 # Insert a new item in the Tools menu
 ui_str = """<ui>
@@ -29,6 +29,9 @@ ui_str = """<ui>
     <menu name="ToolsMenu" action="Tools">
       <placeholder name="ToolsOps_2">
         <menuitem name="Latex" action="RunLaTeX"/>
+      </placeholder>
+      <placeholder name="ToolsOps_2">
+        <menuitem name="ClosePDf" action="ClosePDF"/>
       </placeholder>
     </menu>
   </menubar>
@@ -101,7 +104,10 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
         self._action_group = Gtk.ActionGroup(name="SimpleLaTeXActions")
         self._action_group.add_actions([("RunLaTeX",None,
                                          _("Run LaTeX"),"<Ctrl>T",
-                                         _("Run LaTeX"),self._run_latex)])
+                                         _("Run LaTeX"),self._run_latex),
+                                         ("ClosePDF",None,
+                                         _("Close the Pdf"),None,
+                                         _("Close the Pdf"),self._menu_close_pdf)])
         manager.insert_action_group(self._action_group,-1)
         self._ui_id=manager.add_ui_from_string(ui_str)
 
@@ -114,6 +120,21 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
         manager.remove_action_group(self._action_group)
         # Make sure the manager updates
         manager.ensure_update()
+
+    def _get_doc_info(self):
+        # Get the active document info and make them globally available
+        ##
+        doc = self.window.get_active_document()
+        self._doc = doc
+        # Get the file info
+        self._file_location = doc.get_uri_for_display()
+        self._file_name = doc.get_short_name_for_display()
+        self._mime = doc.get_mime_type()
+
+        # Format the file info for the pdflatex command
+        self._file_folder = self._file_location[:-len(self._file_name)]
+        self._short_name = self._file_name[:-4]
+        return False
 
     def _create_outputpanel(self):
         # Prepare output panel
@@ -142,8 +163,29 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
         self._log_text_view.scroll_to_iter(iter, 0.0, False, 0.5, 0.5)
         return False
 
-    def _close_pdf(self,widget,event):
-        pass
+    def _close_pdf(self):
+        # Make the pdf name.
+        pdf_name = self._short_name + ".pdf"
+        # get the screen and search for the pdf
+        screen = Wnck.Screen.get_default()
+        screen.force_update()
+        window_list = screen.get_windows()
+        # cycle through the window list, if we find a pdf matching the
+        # expected TeX output, we close it.
+        for app_window in window_list:
+            window_name  = app_window.get_name()
+            pos = window_name.find(pdf_name)
+            if pos == 0:
+                app_window.close(0)
+    def _menu_close_pdf(self,widget,what):
+        self._close_pdf()
+        return False
+    def _tab_close_pdf(self,window,tab):
+        # Get the name of the closed tab
+        tab_name = tab.get_document().get_short_name_for_display()
+        # If it is the tabe of the current document, then close the pdf
+        if tab_name == self._file_name:
+            self._close_pdf()
 
     def _get_synctex(self):
         # Grab the synctex action.
@@ -161,14 +203,12 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
     def _call_latex(self,widget,event):
         # Actually call tex.
         ##
-        doc = self.window.get_active_document()
         # Get the file info
-        file_location = doc.get_uri_for_display()
-        file_name = doc.get_short_name_for_display()
-
-        # Format the file info for the pdflatex command
-        file_folder = file_location[:-len(file_name)]
-        short_name = file_name[:-4]
+        file_location = self._file_location
+        file_name = self._file_name
+        file_folder = self._file_folder
+        short_name = self._short_name
+        
         # Construct the pdflatex command
         tex_command = self._create_tex_command().format(short_name,file_name)
 
@@ -184,6 +224,7 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
         if tex_return == 0:
             self.window.get_bottom_panel().set_property("visible",False)
             self._synctex.activate()
+            self.window.connect("tab-removed",self._tab_close_pdf)
         else:
             self._scroll_to_end()
             self.window.get_bottom_panel().set_property("visible",True)
@@ -192,12 +233,17 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
     def _run_latex(self,action,what):
         # Save the file and run latex
         ##
-        self._get_synctex()
         doc = self.window.get_active_document()
-        mime = doc.get_mime_type()
-        if mime == "text/x-tex":
+        # Prepare the synctex action, we have to wait until now
+        # because we need to wait for the synctex plugin to load.
+        self._get_synctex()
+        self._get_doc_info()
+
+        # If the document is a TeX file, we save and compile it.
+        if self._mime == "text/x-tex":
             self._save_action.activate()
             self._process_log("Running pdfLaTexX")
+            # Open bottom panel and tell the user that TeX is running
             self.window.get_bottom_panel().set_property("visible",True)
             latex = doc.connect("saved",self._call_latex)
         else:
