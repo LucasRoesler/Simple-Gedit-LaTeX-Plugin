@@ -107,13 +107,10 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
     def _remove_menu(self):
         # Get the Gtk.UIManager
         manager = self.window.get_ui_manager()
-
         # Remove the ui
         manager.remove_ui(self._ui_id)
-
         # Remove the action group
         manager.remove_action_group(self._action_group)
-
         # Make sure the manager updates
         manager.ensure_update()
 
@@ -146,13 +143,14 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
 
 
     def _create_tex_command(self):
-        delay = "sleep 1; "
         program = "pdflatex"
         options = "-file-line-error -halt-on-error -shell-escape -synctex=1 -jobname={0} {1}"
-        command = delay + program + ' ' + options
+        command = program + ' ' + options
         return command
 
     def _call_latex(self,widget,event):
+        # Actually call tex.
+        ##
         doc = self.window.get_active_document()
         # Get the file info
         file_location = doc.get_uri_for_display()
@@ -182,6 +180,8 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
         return False
 
     def _run_latex(self,action,what):
+        # Save the file and run latex
+        ##
         doc = self.window.get_active_document()
         mime = doc.get_mime_type()
         if mime == "text/x-tex":
