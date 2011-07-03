@@ -197,6 +197,8 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
         mime = doc.get_mime_type()
         if mime == "text/x-tex":
             self._save_action.activate()
+            self._process_log("Running pdfLaTexX")
+            self.window.get_bottom_panel().set_property("visible",True)
             latex = doc.connect("saved",self._call_latex)
         else:
             print "This is not a tex file"
