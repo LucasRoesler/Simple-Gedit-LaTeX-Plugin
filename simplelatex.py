@@ -90,7 +90,10 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
         handler_id = self.window.connect("tab-removed",self.on_tab_removed)
         handlers.append(handler_id)
 
-        self.window.set_data("TabClosingHandlers",handlers)
+        handler_id = self.window.connect("tab-added",self.on_tab_added)
+        handlers.append(handler_id)
+
+        self.window.set_data("TabHandlers",handlers)
         
         # Insert menu items
         self._insert_menu()
@@ -101,7 +104,7 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
         self._remove_menu()
 
         # Deactivate all of the tab handlers.
-        handlers = self.window.get_data("TabClosingHandlers")
+        handlers = self.window.get_data("TabHandlers")
         for handler_id in handlers:
             self.window.disconnect(handler_id)
 
@@ -112,9 +115,19 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
         # Get the name of the closed tab
         document = tab.get_document()
         doc_name = document.get_short_name_for_display()[:-4]
-        print doc_name
         if document.get_mime_type() == "text/x-tex":
             self._close_pdf(doc_name)
+
+    def on_tab_added(self, window, tab, data=None):
+        # It seems that we need to wait for this menu item to be construced,
+        # after tab creation seems to work.
+        self._synctex = self.window.get_ui_manager().get_action("/MenuBar/ToolsMenu/ToolsOps_2/Synctex")
+        # If we have a TeX document, then we try using synctex to open
+        # the document.  This will only work if the *.synctex file is there
+        document = tab.get_document()
+        if document.get_mime_type() == "text/x-tex":
+            handler_id = document.connect("loaded",self._tab_opens_pdf)
+            self.window.set_data("TabOpensPDF",handler_id)
 
     def _insert_menu(self):
         # Get the Gtk.UIManager
@@ -141,10 +154,42 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
         # Make sure the manager updates
         manager.ensure_update()
 
-    def _get_doc_info(self):
+    def _tab_opens_pdf(self,doc,event):
+        # Use synctex to try and open the pdf.
+        self._synctex.activate()
+        # Now we wait for the window to open and refocus on gedit
+        screen = Wnck.Screen.get_default()
+        screen.connect("window-opened",self._focus_gedit,screen)
+
+    def _focus_gedit(self,widget,event,screen):
+        # We refocus on Gedit, we assume that this is occurring as a
+        # result of synctex being called upon the document being opened,
+        # so the last window in the stack should be the pdf and the
+        # second to last is Gedit.  It seems to work. 
+        screen.force_update()
+        window_list = screen.get_windows_stacked()
+        gedit_window = window_list[-2]
+        # Not sure about using a timestampe of zero here. Wnck throughs
+        # a warning, so it would be good to learn more about x11 timestamps
+        gedit_window.activate(0)
+
+    def _split_screen(self):
+        # Non-functional
+        doc = self.window.get_active_document()
+        self._get_doc_info()
+
+        if self._mime == "text/x-tex":
+            screen = Wnck.Screen.get_default()
+            screen.force_update()
+            height = screen.get_height()
+            width = screen.get_width()
+            
+        
+
+    def _get_doc_info(self,doc):
         # Get the active document info and make them globally available
         ##
-        doc = self.window.get_active_document()
+        #doc = self.window.get_active_document()
         # Get the file info
         self._file_location = doc.get_uri_for_display()
         self._file_name = doc.get_short_name_for_display()
@@ -175,6 +220,7 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
         log_buffer = self._log_text_view.get_buffer()
         log_buffer.set_text(log_text,-1)
         return False
+
     def _running_tex(self,message):
         log_buffer = self._log_text_view.get_buffer()
         log_buffer.set_text(message,-1)
@@ -214,10 +260,6 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
         self._close_pdf(doc_name)
         return False
 
-    def _get_synctex(self):
-        self._synctex = self.window.get_ui_manager().get_action("/MenuBar/ToolsMenu/ToolsOps_2/Synctex")
-        return False
-
 
     def _create_tex_command(self):
         program = "pdflatex"
@@ -227,7 +269,7 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
 
     def _call_latex(self,widget,event):
         # Actually call tex.
-        ##
+        ####################
         # Get the file info
         file_location = self._file_location
         file_name = self._file_name
@@ -260,19 +302,17 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
 
     def _run_latex(self,action,what):
         # Save the file and run latex
-        ##
+        #############################
         doc = self.window.get_active_document()
-        # Prepare the synctex action, we have to wait until now
-        # because we need to wait for the synctex plugin to load.
-        self._get_synctex()
-        self._get_doc_info()
+        self._get_doc_info(doc)
 
         # If the document is a TeX file, we save and compile it.
         if self._mime == "text/x-tex":
             self._save_action.activate()
-            self._running_tex("  Running pdfLaTeX ... ")
             # Open bottom panel and tell the user that TeX is running
+            self._running_tex("  Running pdfLaTeX ... ")
             self.window.get_bottom_panel().set_property("visible",True)
+            # Dont' run TeX until the save is complete.
             latex = doc.connect("saved",self._call_latex)
             self.window.set_data("SaveListen",latex)
         else:
