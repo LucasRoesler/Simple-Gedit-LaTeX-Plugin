@@ -83,7 +83,14 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
         # WORK AROUND: I can't figure out how to make gedit_document_save
         # to work, so I used this idea from the gedit-latex plugin.
         self._save_action = self.window.get_ui_manager().get_action("/MenuBar/FileMenu/FileSaveMenu")
-        
+
+        # Create handlers for closed tabs, we will use this to close
+        # the corresponding pdfs that are open.
+        handlers = []
+        handler_id = self.window.connect("tab-removed",self.on_tab_removed)
+        handlers.append(handler_id)
+
+        self.window.set_data("TabClosingHandlers",handlers)
         
         # Insert menu items
         self._insert_menu()
@@ -93,8 +100,21 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
     def do_deactivate(self):
         self._remove_menu()
 
+        # Deactivate all of the tab handlers.
+        handlers = self.window.get_data("TabClosingHandlers")
+        for handler_id in handlers:
+            self.window.disconnect(handler_id)
+
     def do_update_state(self):
         pass
+
+    def on_tab_removed(self, window, tab, data=None):
+        # Get the name of the closed tab
+        document = tab.get_document()
+        doc_name = document.get_short_name_for_display()[:-4]
+        print doc_name
+        if document.get_mime_type() == "text/x-tex":
+            self._close_pdf(doc_name)
 
     def _insert_menu(self):
         # Get the Gtk.UIManager
@@ -163,9 +183,9 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
         self._log_text_view.scroll_to_iter(iter, 0.0, False, 0.5, 0.5)
         return False
 
-    def _close_pdf(self):
+    def _close_pdf(self,doc_name):
         # Make the pdf name.
-        pdf_name = self._short_name + ".pdf"
+        pdf_name = doc_name + ".pdf"
         # get the screen and search for the pdf
         screen = Wnck.Screen.get_default()
         screen.force_update()
@@ -177,19 +197,14 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
             pos = window_name.find(pdf_name)
             if pos == 0:
                 app_window.close(0)
+                
     def _menu_close_pdf(self,widget,what):
-        self._close_pdf()
+        doc = self.window.get_active_document()
+        doc_name = doc.get_short_name_for_display()[:-4]
+        self._close_pdf(doc_name)
         return False
-    def _tab_close_pdf(self,window,tab):
-        # Get the name of the closed tab
-        tab_name = tab.get_document().get_short_name_for_display()
-        # If it is the tabe of the current document, then close the pdf
-        if tab_name == self._file_name:
-            self._close_pdf()
 
     def _get_synctex(self):
-        # Grab the synctex action.
-        ##
         self._synctex = self.window.get_ui_manager().get_action("/MenuBar/ToolsMenu/ToolsOps_2/Synctex")
         return False
 
@@ -224,7 +239,6 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
         if tex_return == 0:
             self.window.get_bottom_panel().set_property("visible",False)
             self._synctex.activate()
-            self.window.connect("tab-removed",self._tab_close_pdf)
         else:
             self._scroll_to_end()
             self.window.get_bottom_panel().set_property("visible",True)
