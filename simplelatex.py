@@ -145,7 +145,6 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
         # Get the active document info and make them globally available
         ##
         doc = self.window.get_active_document()
-        self._doc = doc
         # Get the file info
         self._file_location = doc.get_uri_for_display()
         self._file_name = doc.get_short_name_for_display()
@@ -176,6 +175,17 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
         log_buffer = self._log_text_view.get_buffer()
         log_buffer.set_text(log_text,-1)
         return False
+    def _running_tex(self,message):
+        log_buffer = self._log_text_view.get_buffer()
+        log_buffer.set_text(message,-1)
+        start = log_buffer.get_start_iter()
+        end = log_buffer.get_end_iter()
+        # TODO : there are no errors, but the tag is not working
+        tag = Gtk.TextTag()
+        tag.set_property("foreground","red")
+        #tag.set_property("font","Inconsolta 10")
+        #tag.set_property("weight",700)
+        log_buffer.apply_tag(tag,start,end)
 
     def _scroll_to_end(self):
         log_buffer = self._log_text_view.get_buffer()
@@ -223,6 +233,10 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
         file_name = self._file_name
         file_folder = self._file_folder
         short_name = self._short_name
+
+        # Get rid of the save listener
+        listener = self.window.get_data("SaveListen")
+        self.window.get_active_document().disconnect(listener)
         
         # Construct the pdflatex command
         tex_command = self._create_tex_command().format(short_name,file_name)
@@ -256,10 +270,11 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
         # If the document is a TeX file, we save and compile it.
         if self._mime == "text/x-tex":
             self._save_action.activate()
-            self._process_log("Running pdfLaTexX")
+            self._running_tex("  Running pdfLaTeX ... ")
             # Open bottom panel and tell the user that TeX is running
             self.window.get_bottom_panel().set_property("visible",True)
             latex = doc.connect("saved",self._call_latex)
+            self.window.set_data("SaveListen",latex)
         else:
             print "This is not a tex file"
         return False
