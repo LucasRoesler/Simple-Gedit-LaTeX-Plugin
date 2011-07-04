@@ -154,14 +154,20 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
         # Make sure the manager updates
         manager.ensure_update()
 
-    def _tab_opens_pdf(self,doc,event):
+    def _tab_opens_pdf(self,document,event):
         # Use synctex to try and open the pdf.
         self._synctex.activate()
         # Now we wait for the window to open and refocus on gedit
         screen = Wnck.Screen.get_default()
-        screen.connect("window-opened",self._focus_gedit,screen)
+        h_id = screen.connect("window-opened",self._focus_gedit)
+        self.window.set_data("WindowListener",h_id)
 
-    def _focus_gedit(self,widget,event,screen):
+        # kill the tab listener
+        listener = self.window.get_data("TabOpensPDF")
+        document.disconnect(listener)
+        
+
+    def _focus_gedit(self,screen,window):
         # We refocus on Gedit, we assume that this is occurring as a
         # result of synctex being called upon the document being opened,
         # so the last window in the stack should be the pdf and the
@@ -169,22 +175,32 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
         screen.force_update()
         window_list = screen.get_windows_stacked()
         gedit_window = window_list[-2]
+
         # Not sure about using a timestampe of zero here. Wnck throughs
         # a warning, so it would be good to learn more about x11 timestamps
         gedit_window.activate(0)
 
-    def _split_screen(self):
-        # Non-functional
-        doc = self.window.get_active_document()
-        self._get_doc_info()
+        # kill the listener
+        listener = self.window.get_data("WindowListener")
+        screen.disconnect(listener)
 
-        if self._mime == "text/x-tex":
-            screen = Wnck.Screen.get_default()
-            screen.force_update()
-            height = screen.get_height()
-            width = screen.get_width()
-            
+
+    def _split_screen(self,screen):
+        # not ready yet!
+        height = screen.get_height()
+        width = screen.get_width
+        print width
+        #half_width = width * .5
+        window_list = screen.get_windows_stacked()
         
+        a = window_list[-1] # pdf
+        b = window_list[-2] # gedit
+
+        a.unmaximize()
+        b.unmaximize()
+
+        #a.set_geometry(0, 255, 0, 0, half_width, height)
+        #b.set_geometry(0, 255, half_width + 1, 0 , half_width - 1, height)
 
     def _get_doc_info(self,doc):
         # Get the active document info and make them globally available
