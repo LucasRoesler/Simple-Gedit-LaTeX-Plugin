@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<interface>
+  <!-- interface-requires gtk+ 3.0 -->
+  <object class="GtkBox" id="box1">
+    <property name="visible">True</property>
+    <property name="can_focus">False</property>
+    <property name="orientation">vertical</property>
+    <child>
+      <object class="GtkCheckButton" id="autoopenpdf">
+        <property name="label" translatable="yes">Try to open the PDF when you open a LaTeX document.</property>
+        <property name="visible">True</property>
+        <property name="can_focus">True</property>
+        <property name="receives_default">False</property>
+        <property name="use_action_appearance">False</property>
+        <property name="xalign">0</property>
+        <property name="draw_indicator">True</property>
+      </object>
+      <packing>
+        <property name="expand">False</property>
+        <property name="fill">True</property>
+        <property name="position">0</property>
+      </packing>
+    </child>
+    <child>
+      <object class="GtkTextView" id="cmdlinetext">
+        <property name="visible">True</property>
+        <property name="can_focus">True</property>
+        <property name="buffer">cmdlinebuffer</property>
+      </object>
+      <packing>
+        <property name="expand">False</property>
+        <property name="fill">True</property>
+        <property name="padding">9</property>
+        <property name="position">1</property>
+      </packing>
+    </child>
+    <child>
+      <object class="GtkEntry" id="cmdlineopt">
+        <property name="visible">True</property>
+        <property name="can_focus">True</property>
+        <property name="invisible_char">•</property>
+        <property name="text" translatable="yes">-file-line-error -halt-on-error -shell-escape -synctex=1</property>
+      </object>
+      <packing>
+        <property name="expand">False</property>
+        <property name="fill">True</property>
+        <property name="padding">4</property>
+        <property name="position">2</property>
+      </packing>
+    </child>
+    <child>
+      <object class="GtkBox" id="box2">
+        <property name="visible">True</property>
+        <property name="can_focus">False</property>
+        <property name="tooltip_text" translatable="yes">This is the TeX engine bound to &lt;Ctrl&gt;T</property>
+        <property name="spacing">5</property>
+        <child>
+          <object class="GtkComboBoxText" id="engineopt">
+            <property name="visible">True</property>
+            <property name="can_focus">False</property>
+            <property name="has_default">True</property>
+            <property name="row_span_column">13</property>
+            <items>
+              <item translatable="yes">pdfLaTex</item>
+              <item translatable="yes">plain TeX</item>
+              <item translatable="yes">XeTeX</item>
+            </items>
+          </object>
+          <packing>
+            <property name="expand">False</property>
+            <property name="fill">True</property>
+            <property name="position">0</property>
+          </packing>
+        </child>
+        <child>
+          <object class="GtkTextView" id="enginetextview">
+            <property name="visible">True</property>
+            <property name="can_focus">True</property>
+            <property name="pixels_above_lines">7</property>
+            <property name="buffer">enginetextbuffer</property>
+          </object>
+          <packing>
+            <property name="expand">True</property>
+            <property name="fill">True</property>
+            <property name="padding">8</property>
+            <property name="position">1</property>
+          </packing>
+        </child>
+      </object>
+      <packing>
+        <property name="expand">False</property>
+        <property name="fill">True</property>
+        <property name="padding">7</property>
+        <property name="position">5</property>
+      </packing>
+    </child>
+  </object>
+  <object class="GtkTextBuffer" id="cmdlinebuffer">
+    <property name="text" translatable="yes">Enter command line options below.</property>
+  </object>
+  <object class="GtkTextBuffer" id="enginetextbuffer">
+    <property name="text" translatable="yes">Select the default TeX engine. </property>
+  </object>
+</interface>

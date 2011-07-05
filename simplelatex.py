@@ -20,8 +20,8 @@
 
 
 from gettext import gettext as _
-from gi.repository import GObject, Gtk, Gedit, Wnck, Gdk
-import os, re
+from gi.repository import GObject, Gtk, Gedit, Wnck, Gdk, PeasGtk
+import os
 
 # Insert a new item in the Tools menu
 ui_str = """<ui>
@@ -68,7 +68,7 @@ output_panel_str="""
 """
 
 
-class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
+class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable):
     __gtype_name__ = "SimpleLaTeX"
 
     window = GObject.property(type=Gedit.Window)
@@ -99,6 +99,14 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable):
         self._insert_menu()
         # Create the output panel
         self._create_outputpanel()
+
+    def do_create_configure_widget(self):
+        print self.plugin_info.get_data_dir()
+        pdf_switch = Gtk.CheckButton("Try to open the PDF when you open a LaTeX document.")
+        pdf_switch.set_active(True)
+        pdf_switch2 = pdf_switch
+        return pdf_switch, pdf_switch2
+        
 
     def do_deactivate(self):
         self._remove_menu()
