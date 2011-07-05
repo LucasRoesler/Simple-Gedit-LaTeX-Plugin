@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist>
+    <enum id="texEngineList">
+        <value nick="pdfLaTeX" value="1"/>
+        <value nick="plainTex" value="2"/>
+        <value nick="xetex" value="3"/>
+    </enum>
+    <schema id="org.gnome.gedit.plugins.simplelatex" path="/org/gnome/gedit/plugins/simplelatex/">
+      <key name="select-default-engine" enum="texEngineList">
+          <default>'pdfLaTeX'</default>
+          <summary>The tex engine</summary>
+          <description>
+              Select which tex engine is used to compile documents
+          </description>
+      </key>
+      
+      <key name="commandline-options" type="s">
+          <default>'-file-line-error -halt-on-error -shell-escape -synctex=1'</default>
+          <summary>TeX options</summary>
+          <description>
+              Set the options sent to pdfLaTeX
+          </description>
+      </key>
+
+      <key name="auto-open-pdf" type="b">
+          <default>true</default>
+          <summary>Open PDF with document</summary>
+          <description>
+              Should Gedit try to open the PDF when you open the document?
+          </description>
+      </key>
+    </schema>
+</schemalist>

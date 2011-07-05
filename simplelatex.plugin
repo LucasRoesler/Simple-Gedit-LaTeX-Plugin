@@ -6,4 +6,4 @@ Name=Simple LaTeX
 Description=A simple LaTeX plugin. Requires the synctex plugin.
 Authors=Lucas David-Roesler <roesler.lucas@gmail.com>
 Copyright=Copyright © 2011 Lucas David-Roesler <roesler.lucas@gmail.com>
-Website=http://www.gedit.org
+Website=https://github.com/TheAxeR/Simple-Gedit-LaTeX-Plugin
