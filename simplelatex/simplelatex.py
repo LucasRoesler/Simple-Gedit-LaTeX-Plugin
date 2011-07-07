@@ -105,7 +105,7 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
         pdf_switch = Gtk.CheckButton("Try to open the PDF when you open a LaTeX document.")
         pdf_switch.set_active(True)
         pdf_switch2 = pdf_switch
-        return pdf_switch, pdf_switch2
+        return (pdf_switch, pdf_switch2)
         
 
     def do_deactivate(self):
