@@ -28,27 +28,50 @@ __all__ = ("SimpleLaTeXConfigWidget")
 
 class SimpleLaTeXConfigWidget(object):
     BASE_KEY = "org.gnome.gedit.plugins.simplelatex"
-    AUTO_OPEN_PDF = "autoopenpdf"
-    CMD_LINE_OPT = "cmdlinetext"
-    ENGINE_OPT = "engineopt"
+    AUTO_OPEN_PDF = "auto-open-pdf"
+    CMD_LINE_OPT = "commandline-options"
+    ENGINE_OPT = "select-default-engine"
 
     def __init__(self, datadir):
         object.__init__(self)
 
-        self._ui_path = os.path.join(datadir, 'ui', 'config.ui')
-        self._settings = Gio.Settings.new(self.CONSOLE_KEY_BASE)
+        self._ui_path = os.path.join(datadir, 'config.glade')
+        self._settings = Gio.Settings.new(self.BASE_KEY)
         self._ui = Gtk.Builder()
 
     def configure_widget(self):
-        self._ui.add_objects_from_file(self._ui_path, ["box1"])
+        self._ui.add_objects_from_file(self._ui_path, ["box1","cmdlinebuffer","enginetextbuffer"])
 
-        self.set_auto_open_pdf(self._ui.get_object('autoopenpdf'),
-                                   self._settings.get_string(self.AUTO_OPEN_PDF))
+        # Grab and display the saved settings.
+        self.get_auto_open_pdf(self._ui.get_object('autoopenpdf'),
+                                   self._settings.get_boolean(self.AUTO_OPEN_PDF))
+        self.get_engine_option(self._ui.get_object('engineopt'),
+                                   self._settings.get_enum(self.ENGINE_OPT))
+        self.get_command_line(self._ui.get_object('cmdlineopt'),
+                                   self._settings.get_string(self.CMD_LINE_OPT))
+        # Connect our listeners, so we can actually save any changes made.
+        # Note that the signals are acutally defined in the glade file.
         self._ui.connect_signals(self)
 
         widget = self._ui.get_object('box1')
 
         return widget
 
-    def set_auto_open_pdf(check_button,value):
-        check_button.set_boolean('autoopenpdf', button.get_active())
+    def get_auto_open_pdf(self,check_button,value):
+        # Get the current setting
+        check_button.set_active(value)
+    def get_command_line(self,entry,value):
+        entry.set_text(value)
+    def get_engine_option(self,option_box,value):
+        # Get the current TeX engine, note that the result from
+        # settings is indexed starting at 1, but we need starting
+        # at 0.
+        option_box.set_active(value-1)
+
+    def set_auto_open_pdf(self,check_button):
+        # Change the setting
+        self._settings.set_boolean("auto-open-pdf", check_button.get_active())
+    def set_command_line(self,entry):
+        self._settings.set_string("commandline-options", entry.get_text())
+    def set_engine_option(self,combobox):
+        self._settings.set_enum("select-default-engine", combobox.get_active()+1)

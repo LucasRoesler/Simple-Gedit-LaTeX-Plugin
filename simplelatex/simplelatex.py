@@ -21,6 +21,7 @@
 
 from gettext import gettext as _
 from gi.repository import GObject, Gtk, Gedit, Wnck, Gdk, PeasGtk
+from config import SimpleLaTeXConfigWidget
 import os
 
 # Insert a new item in the Tools menu
@@ -101,11 +102,9 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
         self._create_outputpanel()
 
     def do_create_configure_widget(self):
-        print self.plugin_info.get_data_dir()
-        pdf_switch = Gtk.CheckButton("Try to open the PDF when you open a LaTeX document.")
-        pdf_switch.set_active(True)
-        pdf_switch2 = pdf_switch
-        return (pdf_switch, pdf_switch2)
+        config_widget = SimpleLaTeXConfigWidget(self.plugin_info.get_data_dir())
+
+        return config_widget.configure_widget()
         
 
     def do_deactivate(self):
