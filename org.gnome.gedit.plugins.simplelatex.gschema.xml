@@ -31,12 +31,12 @@
           </description>
       </key>
 
-      <key name="separate-synctex" type="b">
+      <!--<key name="separate-synctex" type="b">
           <default>false</default>
           <summary>Determine if synctex should run as a separate step after compiling the document.</summary>
           <description>
               Determine if synctex should be run as a separate step after compiling the document.  This is recommended if you use rubber.
           </description>
-      </key>
+      </key>-->
     </schema>
 </schemalist>

@@ -108,7 +108,7 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
         print "Hurah for a simpleLaTeX"
 
         self.settings = Gio.Settings.new(self.BASE_KEY)
-        self.settings.connect("changed", self.on_settings_changed)
+        self.settings.connect("changed", self._get_settings)
         self._get_settings()
         # create a save action.
         # WORK AROUND: I can't figure out how to make gedit_document_save
@@ -147,9 +147,6 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
 
     def do_update_state(self):
         pass
-
-    def on_settings_changed(self,settings,key):
-        self._get_settings()
 
     def on_tab_removed(self, window, tab, data=None):
         # Get the name of the closed tab
@@ -302,9 +299,12 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
         self.window.get_bottom_panel().activate_item(self.proc_log_widget)
 
 
-    def _running_tex(self,message):
+    def _insert_tex_message(self,message):
+        # Create and display a message in the Raw Tex Log panel
         log_buffer = self._log_text_view.get_buffer()
         log_buffer.set_text(message,-1)
+        self.window.get_bottom_panel().set_property("visible",True)
+        self.window.get_bottom_panel().activate_item(self._log_widget)
 
     def _scroll_to_end(self):
         log_buffer = self._log_text_view.get_buffer()
@@ -334,21 +334,6 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
         self._close_pdf(doc_name)
         return False
 
-
-    def _create_tex_command(self):
-        # Not needed any longer
-        program = self.tex_engine
-        options = self.tex_options + " {LONGFILE}"
-        command = program + ' ' + options
-        return command
-
-    def _run_synctex(self):
-        synctex_cmd = "synctex update -o "
-        synctex_cmd += self._file_location
-        synctex_cmd += " "
-        synctex_cmd += self._file_folder
-        result = os.system(synctex_cmd)
-        print synctex_cmd
 
     def _call_tex(self,widget,event):
         # Actually call tex.
@@ -399,8 +384,6 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
             self._save_action.activate()
             # Open bottom panel and tell the user that TeX is running
             self._running_tex("  Running pdfLaTeX ... ")
-            self.window.get_bottom_panel().activate_item(self._log_widget)
-            self.window.get_bottom_panel().set_property("visible",True)
             
             # Dont' run TeX until the save is complete.
             latex = doc.connect("saved",self._call_tex)
