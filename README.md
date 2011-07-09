@@ -14,6 +14,7 @@ provides.  All I need is a clean interface and a keyboard short cut
 that runs LaTeX.
 
 Some future goals are to
+
 * The current SyncTeX support is pretty raw.  It would be good to make
   sure that the plugin is installed and activated when this plugin is
   activated.
@@ -21,6 +22,7 @@ Some future goals are to
 
 Current Features
 ----------------
+
 * Compile the current tex document using `<Ctrl>t`
 * Auto-open the pdf when a tex document is open
 * Auto-close the pdf when the tex document is closed
