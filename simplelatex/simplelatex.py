@@ -20,9 +20,9 @@
 
 
 from gettext import gettext as _
-from gi.repository import GObject, Gtk, Gedit, Wnck, Gdk, PeasGtk
+from gi.repository import Gio, GObject, Gtk, Gedit, Wnck, Gdk, PeasGtk
 from config import SimpleLaTeXConfigWidget
-import os
+import os, subprocess
 
 # Insert a new item in the Tools menu
 ui_str = """<ui>
@@ -57,9 +57,6 @@ output_panel_str="""
         <property name="wrap_mode">GTK_WRAP_WORD</property>
         <property name="cursor_visible">False</property>
         <property name="accepts_tab">False</property>
-        <signal name="button_press_event" handler="on_view_button_press_event"/>
-        <signal name="motion_notify_event" handler="on_view_motion_notify_event"/>
-        <signal name="visibility_notify_event" handler="on_view_visibility_notify_event"/>
       </object>
     </child>
       </object>
@@ -68,9 +65,39 @@ output_panel_str="""
 </interface>
 """
 
+log_panel_str="""
+<interface>
+  <object class="GtkHBox" id="log-panel">
+    <property name="visible">True</property>
+    <child>
+      <object class="GtkScrolledWindow" id="scrolledwindow1">
+    <property name="visible">True</property>
+    <property name="hscrollbar_policy">GTK_POLICY_AUTOMATIC</property>
+    <property name="vscrollbar_policy">GTK_POLICY_AUTOMATIC</property>
+    <property name="shadow_type">GTK_SHADOW_IN</property>
+    <child>
+      <object class="GtkTextView" id="view">
+        <property name="visible">True</property>
+        <property name="editable">False</property>
+        <property name="wrap_mode">GTK_WRAP_WORD</property>
+        <property name="cursor_visible">False</property>
+        <property name="accepts_tab">False</property>
+      </object>
+    </child>
+      </object>
+    </child>
+  </object>
+</interface>
+"""
 
 class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable):
     __gtype_name__ = "SimpleLaTeX"
+    
+    BASE_KEY = "org.gnome.gedit.plugins.simplelatex"
+    AUTO_OPEN_PDF = "auto-open-pdf"
+    CMD_LINE_OPT = "commandline-options"
+    ENGINE_OPT = "select-default-engine"
+    SYNCTEX_OPT = "separate-synctex"
 
     window = GObject.property(type=Gedit.Window)
 
@@ -80,6 +107,9 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
     def do_activate(self):
         print "Hurah for a simpleLaTeX"
 
+        self.settings = Gio.Settings.new(self.BASE_KEY)
+        self.settings.connect("changed", self.on_settings_changed)
+        self._get_settings()
         # create a save action.
         # WORK AROUND: I can't figure out how to make gedit_document_save
         # to work, so I used this idea from the gedit-latex plugin.
@@ -118,6 +148,9 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
     def do_update_state(self):
         pass
 
+    def on_settings_changed(self,settings,key):
+        self._get_settings()
+
     def on_tab_removed(self, window, tab, data=None):
         # Get the name of the closed tab
         document = tab.get_document()
@@ -135,6 +168,12 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
         if document.get_mime_type() == "text/x-tex":
             handler_id = document.connect("loaded",self._tab_opens_pdf)
             self.window.set_data("TabOpensPDF",handler_id)
+
+    def _get_settings(self):
+        self.auto_open_pdf = self.settings.get_boolean(self.AUTO_OPEN_PDF)
+        self.tex_engine = self.settings.get_string(self.ENGINE_OPT)
+        self.tex_options = self.settings.get_string(self.CMD_LINE_OPT)
+        self.synctex_opt = self.settings.get_boolean(self.SYNCTEX_OPT)
 
     def _insert_menu(self):
         # Get the Gtk.UIManager
@@ -185,7 +224,7 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
 
         # Not sure about using a timestampe of zero here. Wnck throughs
         # a warning, so it would be good to learn more about x11 timestamps
-        gedit_window.activate(0)
+        gedit_window.activate(1)
 
         # kill the listener
         listener = self.window.get_data("WindowListener")
@@ -233,28 +272,39 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
 
         # Insert panel
         panel = self.window.get_bottom_panel()
-        panel.add_item(self._log_widget,"TeX Log","TeX Log",None)
+        panel.add_item(self._log_widget,"Raw TeX Log","Raw TeX Log",None)
         # And focus it
-        panel.activate_item(self._log_widget)
+        #panel.activate_item(self._log_widget)
+        logtab = Gtk.Builder()
+        logtab.add_from_string(log_panel_str)
+        self.proc_text_view = logtab.get_object('view')
+        self.proc_log_widget = logtab.get_object('log-panel')
+        panel.add_item(self.proc_log_widget,'Tex Log','TeX Log',None)
+        panel.activate_item(self.proc_log_widget)
         return False
 
     def _process_log(self,log_text):
         # Write the log file
         log_buffer = self._log_text_view.get_buffer()
         log_buffer.set_text(log_text,-1)
-        return False
+
+        short_name = self._short_name
+        file_folder = self._file_folder
+        file_location = self._file_location
+        
+        errors = subprocess.check_output(["rubber-info --errors " + file_folder + short_name + ".log"],shell=True)
+        checks = subprocess.check_output(["rubber-info --check " + file_folder + short_name + ".log"],shell=True)
+        refs = subprocess.check_output(["rubber-info --refs " + file_folder + short_name + ".log"],shell=True)
+        logbuf = self.proc_text_view.get_buffer()
+        processed_log = errors + refs + checks
+        
+        logbuf.set_text(processed_log.replace(self._file_name+':',''),-1)
+        self.window.get_bottom_panel().activate_item(self.proc_log_widget)
+
 
     def _running_tex(self,message):
         log_buffer = self._log_text_view.get_buffer()
         log_buffer.set_text(message,-1)
-        start = log_buffer.get_start_iter()
-        end = log_buffer.get_end_iter()
-        # TODO : there are no errors, but the tag is not working
-        tag = Gtk.TextTag()
-        tag.set_property("foreground","red")
-        #tag.set_property("font","Inconsolta 10")
-        #tag.set_property("weight",700)
-        log_buffer.apply_tag(tag,start,end)
 
     def _scroll_to_end(self):
         log_buffer = self._log_text_view.get_buffer()
@@ -274,8 +324,9 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
         for app_window in window_list:
             window_name  = app_window.get_name()
             pos = window_name.find(pdf_name)
+            # if the window name starts with pdf_name we close it
             if pos == 0:
-                app_window.close(0)
+                app_window.close(1)
                 
     def _menu_close_pdf(self,widget,what):
         doc = self.window.get_active_document()
@@ -285,12 +336,21 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
 
 
     def _create_tex_command(self):
-        program = "pdflatex"
-        options = "-file-line-error -halt-on-error -shell-escape -synctex=1 -jobname={0} {1}"
+        # Not needed any longer
+        program = self.tex_engine
+        options = self.tex_options + " {LONGFILE}"
         command = program + ' ' + options
         return command
 
-    def _call_latex(self,widget,event):
+    def _run_synctex(self):
+        synctex_cmd = "synctex update -o "
+        synctex_cmd += self._file_location
+        synctex_cmd += " "
+        synctex_cmd += self._file_folder
+        result = os.system(synctex_cmd)
+        print synctex_cmd
+
+    def _call_tex(self,widget,event):
         # Actually call tex.
         ####################
         # Get the file info
@@ -304,11 +364,16 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
         self.window.get_active_document().disconnect(listener)
         
         # Construct the pdflatex command
-        tex_command = self._create_tex_command().format(short_name,file_name)
+        tex_command = self.tex_engine
+        tex_command += " " + self.tex_options
+        tex_command += " {NAME}".format(SHORTNAME=short_name,NAME=file_name)
 
         # Go to the file folder and run tex on the document
         os.chdir(file_folder)
         tex_return = os.system(tex_command)
+
+        if self.synctex_opt:
+            self._run_synctex()
 
         # Add log to output panel
         log_file = open(file_folder + short_name + ".log","r")
@@ -334,9 +399,11 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
             self._save_action.activate()
             # Open bottom panel and tell the user that TeX is running
             self._running_tex("  Running pdfLaTeX ... ")
+            self.window.get_bottom_panel().activate_item(self._log_widget)
             self.window.get_bottom_panel().set_property("visible",True)
+            
             # Dont' run TeX until the save is complete.
-            latex = doc.connect("saved",self._call_latex)
+            latex = doc.connect("saved",self._call_tex)
             self.window.set_data("SaveListen",latex)
         else:
             print "This is not a tex file"

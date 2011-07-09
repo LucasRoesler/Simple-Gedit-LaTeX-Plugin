@@ -23,18 +23,39 @@
       </packing>
     </child>
     <child>
+      <object class="GtkCheckButton" id="synctex">
+        <property name="label" translatable="yes">Run synctex as a separate step.</property>
+        <property name="visible">True</property>
+        <property name="can_focus">True</property>
+        <property name="receives_default">False</property>
+        <property name="use_action_appearance">False</property>
+        <property name="xalign">0</property>
+        <property name="yalign">0.54000002145767212</property>
+        <property name="draw_indicator">True</property>
+        <signal name="toggled" handler="set_synctex" swapped="no"/>
+      </object>
+      <packing>
+        <property name="expand">False</property>
+        <property name="fill">True</property>
+        <property name="position">1</property>
+      </packing>
+    </child>
+    <child>
       <object class="GtkLabel" id="cmdlineoptlabel">
         <property name="visible">True</property>
         <property name="can_focus">False</property>
         <property name="margin_left">1</property>
         <property name="margin_top">7</property>
         <property name="xalign">0.05000000074505806</property>
-        <property name="label" translatable="yes">Enter the TeX engine commandline options below:</property>
+        <property name="label" translatable="yes">Enter the TeX engine commandline options below, you may use {NAME} and {SHORTNAME} to reference the current file with or without the .tex extentions:</property>
+        <property name="wrap">True</property>
+        <property name="wrap_mode">word-char</property>
+        <property name="max_width_chars">0</property>
       </object>
       <packing>
         <property name="expand">True</property>
         <property name="fill">True</property>
-        <property name="position">1</property>
+        <property name="position">2</property>
       </packing>
     </child>
     <child>
@@ -48,7 +69,7 @@
         <property name="expand">False</property>
         <property name="fill">True</property>
         <property name="padding">4</property>
-        <property name="position">2</property>
+        <property name="position">3</property>
       </packing>
     </child>
     <child>
@@ -62,11 +83,10 @@
           <object class="GtkComboBoxText" id="engineopt">
             <property name="visible">True</property>
             <property name="can_focus">False</property>
-            <property name="has_default">True</property>
-            <property name="row_span_column">13</property>
             <property name="active">1</property>
             <items>
               <item>pdfLaTex</item>
+              <item translatable="yes">rubber</item>
               <item>plain TeX</item>
               <item>XeTeX</item>
             </items>
@@ -95,7 +115,7 @@
         <property name="expand">False</property>
         <property name="fill">True</property>
         <property name="padding">7</property>
-        <property name="position">3</property>
+        <property name="position">4</property>
       </packing>
     </child>
   </object>

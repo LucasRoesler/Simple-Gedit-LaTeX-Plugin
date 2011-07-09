@@ -31,6 +31,7 @@ class SimpleLaTeXConfigWidget(object):
     AUTO_OPEN_PDF = "auto-open-pdf"
     CMD_LINE_OPT = "commandline-options"
     ENGINE_OPT = "select-default-engine"
+    SYNCTEX_OPT = "separate-synctex"
 
     def __init__(self, datadir):
         object.__init__(self)
@@ -40,11 +41,13 @@ class SimpleLaTeXConfigWidget(object):
         self._ui = Gtk.Builder()
 
     def configure_widget(self):
-        self._ui.add_objects_from_file(self._ui_path, ["box1","cmdlinebuffer","enginetextbuffer"])
+        self._ui.add_objects_from_file(self._ui_path, ["box1"])
 
         # Grab and display the saved settings.
         self.get_auto_open_pdf(self._ui.get_object('autoopenpdf'),
                                    self._settings.get_boolean(self.AUTO_OPEN_PDF))
+        self.get_auto_open_pdf(self._ui.get_object('synctex'),
+                                   self._settings.get_boolean(self.SYNCTEX_OPT))
         self.get_engine_option(self._ui.get_object('engineopt'),
                                    self._settings.get_enum(self.ENGINE_OPT))
         self.get_command_line(self._ui.get_object('cmdlineopt'),
@@ -68,10 +71,12 @@ class SimpleLaTeXConfigWidget(object):
         # at 0.
         option_box.set_active(value-1)
 
+    # Change the setting
     def set_auto_open_pdf(self,check_button):
-        # Change the setting
         self._settings.set_boolean("auto-open-pdf", check_button.get_active())
     def set_command_line(self,entry):
         self._settings.set_string("commandline-options", entry.get_text())
     def set_engine_option(self,combobox):
         self._settings.set_enum("select-default-engine", combobox.get_active()+1)
+    def set_synctex(self,check_button):
+        self._settings.set_boolean("separate-synctex", check_button.get_active())
