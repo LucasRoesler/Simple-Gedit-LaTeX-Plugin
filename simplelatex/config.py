@@ -31,7 +31,6 @@ class SimpleLaTeXConfigWidget(object):
     AUTO_OPEN_PDF = "auto-open-pdf"
     CMD_LINE_OPT = "commandline-options"
     ENGINE_OPT = "select-default-engine"
-    SYNCTEX_OPT = "separate-synctex"
 
     def __init__(self, datadir):
         object.__init__(self)
@@ -46,8 +45,6 @@ class SimpleLaTeXConfigWidget(object):
         # Grab and display the saved settings.
         self.get_auto_open_pdf(self._ui.get_object('autoopenpdf'),
                                    self._settings.get_boolean(self.AUTO_OPEN_PDF))
-        self.get_auto_open_pdf(self._ui.get_object('synctex'),
-                                   self._settings.get_boolean(self.SYNCTEX_OPT))
         self.get_engine_option(self._ui.get_object('engineopt'),
                                    self._settings.get_enum(self.ENGINE_OPT))
         self.get_command_line(self._ui.get_object('cmdlineopt'),
@@ -78,5 +75,3 @@ class SimpleLaTeXConfigWidget(object):
         self._settings.set_string("commandline-options", entry.get_text())
     def set_engine_option(self,combobox):
         self._settings.set_enum("select-default-engine", combobox.get_active()+1)
-    def set_synctex(self,check_button):
-        self._settings.set_boolean("separate-synctex", check_button.get_active())

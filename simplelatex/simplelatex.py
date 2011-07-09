@@ -97,7 +97,6 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
     AUTO_OPEN_PDF = "auto-open-pdf"
     CMD_LINE_OPT = "commandline-options"
     ENGINE_OPT = "select-default-engine"
-    SYNCTEX_OPT = "separate-synctex"
 
     window = GObject.property(type=Gedit.Window)
 
@@ -170,7 +169,6 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
         self.auto_open_pdf = self.settings.get_boolean(self.AUTO_OPEN_PDF)
         self.tex_engine = self.settings.get_string(self.ENGINE_OPT)
         self.tex_options = self.settings.get_string(self.CMD_LINE_OPT)
-        self.synctex_opt = self.settings.get_boolean(self.SYNCTEX_OPT)
 
     def _insert_menu(self):
         # Get the Gtk.UIManager
@@ -356,9 +354,6 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
         # Go to the file folder and run tex on the document
         os.chdir(file_folder)
         tex_return = os.system(tex_command)
-
-        if self.synctex_opt:
-            self._run_synctex()
 
         # Add log to output panel
         log_file = open(file_folder + short_name + ".log","r")
