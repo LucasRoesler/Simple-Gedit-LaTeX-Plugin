@@ -30,13 +30,19 @@
               Should Gedit try to open the PDF when you open the document?
           </description>
       </key>
-
-      <!--<key name="separate-synctex" type="b">
-          <default>false</default>
-          <summary>Determine if synctex should run as a separate step after compiling the document.</summary>
-          <description>
-              Determine if synctex should be run as a separate step after compiling the document.  This is recommended if you use rubber.
-          </description>
-      </key>-->
+      <key name="pdflatex-opts" type="s">
+         <default>-shell-escape -synctex=1</default>
+         <summary>Sensible default options for pdflatex.</summary>
+         <description>
+             Everyone loves synctex and --shell-escape is great for tikz.
+         </description>
+      </key>
+      <key name="rubber-opts" type="s">
+         <default>-c 'setlist arguments --shell-escape' -d</default>
+         <summary>Sensible default options for rubber.</summary>
+         <description>
+             To activate shell-escape we use the -c option. -d sets the output to pdf.
+         </description>
+      </key>
     </schema>
 </schemalist>
