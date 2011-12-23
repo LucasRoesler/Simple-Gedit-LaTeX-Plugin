@@ -24,6 +24,11 @@ Current Features
 * Compile the current tex document using `<Ctrl>t`
 * Auto-open the pdf when a tex document is open
 * Auto-close the pdf when the tex document is closed
+* Run Bibtex and MakeIndex on the current file
+
+Dependencies 
+============
+* Rubber - https://launchpad.net/rubber - this allows us to easily process the tex log file.
 
 Installation
 ============
@@ -42,7 +47,7 @@ copy `org.gnome.get.plugins.simplelatex.gschema.xml` to
 
 you can use
     
-    sudo cp org.gnome.get.plugins.simplelatex.gschema.xml /usr/share/glib-2.0/schemas/
+    sudo cp org.gnome.gedit.plugins.simplelatex.gschema.xml /usr/share/glib-2.0/schemas/
     
 and then run 
 

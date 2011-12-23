@@ -1,0 +1,12 @@
+<ui>
+  <menubar name="MenuBar">
+    <menu name="ToolsMenu" action="Tools">
+      <placeholder name="ToolsOps_3">
+        <menuitem name="DefaultEngine" action="rundefault"/>        
+        <menuitem name="Bibtex" action="runbibtex"/>
+        <menuitem name="MakeIndex" action="runmakeindex"/>
+        <menuitem name="ClosePDf" action="ClosePDF"/>
+      </placeholder>
+    </menu>
+  </menubar>
+</ui>

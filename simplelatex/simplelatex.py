@@ -4,40 +4,26 @@
 #
 # Copyright (C) 2011 Lucas David-Roesler
 #
-# This program is free software; you can redistribute it and/or modify it under
-# the terms of the GNU General Public Licence as published by the Free Software
-# Foundation; either version 2 of the Licence, or (at your option) any later
-# version.
+# This program is free software; you can redistribute it and/or modify
+# it under the terms of the GNU General Public Licence as published by
+# the Free Software Foundation; either version 2 of the Licence, or
+# (at your option) any later version.
 #
-# This program is distributed in the hope that it will be useful, but WITHOUT
-# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS
-# FOR A PARTICULAR PURPOSE.  See the GNU General Public Licence for more
-# details.
+# This program is distributed in the hope that it will be useful, but
+# WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+# General Public Licence for more details.
 #
-# You should have received a copy of the GNU General Public Licence along with
-# this program; if not, write to the Free Software Foundation, Inc., 51 Franklin
-# Street, Fifth Floor, Boston, MA  02110-1301, USA
+# You should have received a copy of the GNU General Public Licence along
+# with this program; if not, write to the Free Software Foundation, Inc.,
+# 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA
 
 
 from gettext import gettext as _
 from gi.repository import Gio, GObject, Gtk, Gedit, Wnck, Gdk, PeasGtk
-from config import SimpleLaTeXConfigWidget
+from config import SimpleLatexConfigWidget
 import os, subprocess
 
-# Insert a new item in the Tools menu
-ui_str = """<ui>
-  <menubar name="MenuBar">
-    <menu name="ToolsMenu" action="Tools">
-      <placeholder name="ToolsOps_2">
-        <menuitem name="Latex" action="RunLaTeX"/>
-      </placeholder>
-      <placeholder name="ToolsOps_2">
-        <menuitem name="ClosePDf" action="ClosePDF"/>
-      </placeholder>
-    </menu>
-  </menubar>
-</ui>
-"""
 
 # Create the output panel for the log file
 output_panel_str="""
@@ -104,7 +90,7 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
         GObject.Object.__init__(self)
 
     def do_activate(self):
-        print "Hurah for a simpleLaTeX"
+        print "Hurrah for a simpleLaTeX"
 
         self.settings = Gio.Settings.new(self.BASE_KEY)
         self.settings.connect("changed", self._get_settings)
@@ -124,6 +110,8 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
         handlers.append(handler_id)
 
         self.window.set_data("TabHandlers",handlers)
+
+        self.window.connect("active-tab-changed",self.on_tab_change)
         
         # Insert menu items
         self._insert_menu()
@@ -131,10 +119,8 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
         self._create_outputpanel()
 
     def do_create_configure_widget(self):
-        config_widget = SimpleLaTeXConfigWidget(self.plugin_info.get_data_dir())
-
+        config_widget = SimpleLatexConfigWidget(self.plugin_info.get_data_dir())
         return config_widget.configure_widget()
-        
 
     def do_deactivate(self):
         self._remove_menu()
@@ -146,6 +132,9 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
 
     def do_update_state(self):
         pass
+    
+    def on_tab_change(self,window,tab):
+        self._toggle_menu_state(window)
 
     def on_tab_removed(self, window, tab, data=None):
         # Get the name of the closed tab
@@ -153,6 +142,8 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
         doc_name = document.get_short_name_for_display()[:-4]
         if document.get_mime_type() == "text/x-tex":
             self._close_pdf(doc_name)
+            self._toggle_menu_state(window)
+
 
     def on_tab_added(self, window, tab, data=None):
         # It seems that we need to wait for this menu item to be construced,
@@ -176,14 +167,35 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
 
         #Create a new action group
         self._action_group = Gtk.ActionGroup(name="SimpleLaTeXActions")
-        self._action_group.add_actions([("RunLaTeX",None,
-                                         _("Run LaTeX"),"<Ctrl>T",
-                                         _("Run LaTeX"),self._run_latex),
+        self._action_group.add_actions([("rundefault",None,
+                                         _("Compile"),"<Ctrl>T",
+                                         _("Run the default engine"),self._run_latex),
                                          ("ClosePDF",None,
                                          _("Close the Pdf"),None,
-                                         _("Close the Pdf"),self._menu_close_pdf)])
+                                         _("Close the Pdf"),self._menu_close_pdf),
+                                         ("runmakeindex",None,
+                                         _("MakeIndex"),None,
+                                         _("MakeIndex"),self._run_makeindex),
+                                         ("runbibtex",None,
+                                         _("Bibtex"),None,
+                                         _("Bibtex"),self._run_bibtex)])
         manager.insert_action_group(self._action_group,-1)
-        self._ui_id=manager.add_ui_from_string(ui_str)
+
+        self._ui_id=manager.add_ui_from_file(self.plugin_info.get_data_dir() + "/menu.ui")
+        self._action_group.set_sensitive(False)
+
+    def _toggle_menu_state(self,window):
+        tab = window.get_active_tab()
+        document = tab.get_document()
+
+        if document.get_mime_type() == "text/x-tex":
+            self._action_group.set_sensitive(True)
+        else:
+            self._action_group.set_sensitive(False)
+
+    def _pass(self,action):
+        print action.get_name()[3:]
+        pass
 
     def _remove_menu(self):
         # Get the Gtk.UIManager
@@ -252,29 +264,29 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
         self._file_name = doc.get_short_name_for_display()
         self._mime = doc.get_mime_type()
 
+
         # Format the file info for the pdflatex command
         self._file_folder = self._file_location[:-len(self._file_name)]
         self._short_name = self._file_name[:-4]
         return False
 
     def _create_outputpanel(self):
-        # Prepare output panel
+        # Insert raw log output panel
         output_panel = Gtk.Builder()
         output_panel.add_from_string(output_panel_str)
         log_text_view = output_panel.get_object('view')
         self._log_text_view = log_text_view
         self._log_widget = output_panel.get_object('output-panel')
-
-        # Insert panel
         panel = self.window.get_bottom_panel()
         panel.add_item(self._log_widget,"Raw TeX Log","Raw TeX Log",None)
-        # And focus it
-        #panel.activate_item(self._log_widget)
+        
+        # Insert the processed log output panel
         logtab = Gtk.Builder()
         logtab.add_from_string(log_panel_str)
         self.proc_text_view = logtab.get_object('view')
         self.proc_log_widget = logtab.get_object('log-panel')
         panel.add_item(self.proc_log_widget,'Tex Log','TeX Log',None)
+        # And focus it
         panel.activate_item(self.proc_log_widget)
         return False
 
@@ -287,15 +299,18 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
         file_folder = self._file_folder
         file_location = self._file_location
         
-        errors = subprocess.check_output(["rubber-info --errors " + file_folder + short_name + ".log"],shell=True)
-        checks = subprocess.check_output(["rubber-info --check " + file_folder + short_name + ".log"],shell=True)
-        refs = subprocess.check_output(["rubber-info --refs " + file_folder + short_name + ".log"],shell=True)
+        processed_log  = subprocess.check_output(["rubber-info --check " + file_folder + short_name + ".log"],shell=True)
         logbuf = self.proc_text_view.get_buffer()
-        processed_log = errors + refs + checks
-        
+    
         logbuf.set_text(processed_log.replace(self._file_name+':',''),-1)
-        self.window.get_bottom_panel().activate_item(self.proc_log_widget)
 
+
+        if len(processed_log)>0:
+            # If there are any errors or warning, we focus the processed log tab
+            self.window.get_bottom_panel().activate_item(self.proc_log_widget)
+        else:
+            # if there are no errors or warnings, then we focus on the raw log tab
+            self.window.get_bottom_panel().activate_item(self._log_widget)
 
     def _insert_tex_message(self,message):
         # Create and display a message in the Raw Tex Log panel
@@ -303,12 +318,6 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
         log_buffer.set_text(message,-1)
         self.window.get_bottom_panel().set_property("visible",True)
         self.window.get_bottom_panel().activate_item(self._log_widget)
-
-    def _scroll_to_end(self):
-        log_buffer = self._log_text_view.get_buffer()
-        iter = log_buffer.get_end_iter()
-        self._log_text_view.scroll_to_iter(iter, 0.0, False, 0.5, 0.5)
-        return False
 
     def _close_pdf(self,doc_name):
         # Make the pdf name.
@@ -326,7 +335,7 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
             if pos == 0:
                 app_window.close(1)
                 
-    def _menu_close_pdf(self,widget,what):
+    def _menu_close_pdf(self,widget):
         doc = self.window.get_active_document()
         doc_name = doc.get_short_name_for_display()[:-4]
         self._close_pdf(doc_name)
@@ -364,11 +373,10 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
             self.window.get_bottom_panel().set_property("visible",False)
             self._synctex.activate()
         else:
-            self._scroll_to_end()
             self.window.get_bottom_panel().set_property("visible",True)
         return False
 
-    def _run_latex(self,action,what):
+    def _run_latex(self,action):
         # Save the file and run latex
         #############################
         doc = self.window.get_active_document()
@@ -378,11 +386,88 @@ class SimpleLatex(GObject.Object, Gedit.WindowActivatable, PeasGtk.Configurable)
         if self._mime == "text/x-tex":
             self._save_action.activate()
             # Open bottom panel and tell the user that TeX is running
-            self._running_tex("  Running pdfLaTeX ... ")
+            self._insert_tex_message("  Running pdfLaTeX ... ")
             
             # Dont' run TeX until the save is complete.
             latex = doc.connect("saved",self._call_tex)
             self.window.set_data("SaveListen",latex)
         else:
             print "This is not a tex file"
+        return False
+    
+    def _run_bibtex(self,action):
+        doc = self.window.get_active_document()
+        self._get_doc_info(doc)
+        file_folder = self._file_folder
+        short_name = self._short_name
+        command = "bibtex " +  "'" + short_name + "'"
+        result = subprocess.Popen([command],stdout=subprocess.PIPE,shell=True,cwd=file_folder)
+        output = result.communicate()[0]
+
+        log_buffer = self._log_text_view.get_buffer()
+        log_buffer.set_text(output,-1)
+        return False
+
+
+
+    def _run_makeindex(self,action):
+        doc = self.window.get_active_document()
+        self._get_doc_info(doc)
+        file_folder = self._file_folder
+        short_name = self._short_name
+        command = "makeindex " +  "'" + short_name + "'"
+        result = subprocess.Popen([command],stdout=subprocess.PIPE,shell=True,cwd=file_folder)
+        output = result.communicate()[0] 
+
+        log_buffer = self._log_text_view.get_buffer()
+        log_buffer.set_text(output,-1)
+        return False
+
+    def _run_engine(self,engine):
+        # Get rid of the save listener
+        listener = self.window.get_data("SaveListen")        
+        self.window.get_active_document().disconnect(listener)
+
+        ####################
+        # Get the file info
+        file_location = self._file_location
+        file_name = self._file_name
+        file_folder = self._file_folder
+        short_name = self._short_name
+
+        # Get the compile options
+        engine_options = self.settings.get_string(engine + '-options')
+        command = engine + ' ' + engin_options.format(SHORTNAME="'"+self._short_name+"'",NAME="'"+self._file_name+"'")
+
+        # Go to the file folder and run tex on the document
+        return_code = subprocess.call([command],shell=True,cwd=self.file_folder)
+
+        # Add log to output panel
+        log_file = open(file_folder + short_name + ".log","r")
+        log_text = log_file.read()
+        log_file.close()
+        self._process_log(log_text)
+
+        if return_code == 0:
+            self.window.get_bottom_panel().set_property("visible",False)
+            self._synctex.activate()
+        else:
+            self.window.get_bottom_panel().set_property("visible",True)
+        return False
+
+    def _compile_document(self,action,extra):
+        # Save the file and run latex
+        #############################
+        doc = self.window.get_active_document()
+        self._get_doc_info(doc)
+
+        engine = action.get_name()[3:]
+        # If the document is a TeX file, we save and compile it.
+        if self._mime == "text/x-tex":
+            self._save_action.activate()
+            # Open bottom panel and tell the user that TeX is running
+            self._insert_tex_message("  Compiling using the " + engine + " engine ... ")
+            # Dont' run TeX until the save is complete.
+            saved = doc.connect("saved",self._run_engine,engine)
+            self.window.set_data("SaveListen",saved)
         return False

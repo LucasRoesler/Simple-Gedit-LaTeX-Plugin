@@ -26,11 +26,11 @@ from gi.repository import Gio, Gtk, Gdk
 __all__ = ("SimpleLaTeXConfigWidget")
 
 
-class SimpleLaTeXConfigWidget(object):
+class SimpleLatexConfigWidget(object):
     BASE_KEY = "org.gnome.gedit.plugins.simplelatex"
     AUTO_OPEN_PDF = "auto-open-pdf"
     CMD_LINE_OPT = "commandline-options"
-    DEFALT_ENGINE = "select-default-engine"
+    ENGINE_OPT = "select-default-engine"
 
     def __init__(self, datadir):
         object.__init__(self)
@@ -45,8 +45,8 @@ class SimpleLaTeXConfigWidget(object):
         # Grab and display the saved settings.
         self.get_auto_open_pdf(self._ui.get_object('autoopenpdf'),
                                    self._settings.get_boolean(self.AUTO_OPEN_PDF))
-        self.get_default_engine(self._ui.get_object('defaultengine'),
-                                   self._settings.get_enum(self.DEFAULT_ENGINE))
+        self.get_engine_option(self._ui.get_object('engineopt'),
+                                   self._settings.get_enum(self.ENGINE_OPT))
         self.get_command_line(self._ui.get_object('cmdlineopt'),
                                    self._settings.get_string(self.CMD_LINE_OPT))
         # Connect our listeners, so we can actually save any changes made.
@@ -62,7 +62,7 @@ class SimpleLaTeXConfigWidget(object):
         check_button.set_active(value)
     def get_command_line(self,entry,value):
         entry.set_text(value)
-    def get_default_engine(self,option_box,value):
+    def get_engine_option(self,option_box,value):
         # Get the current TeX engine, note that the result from
         # settings is indexed starting at 1, but we need starting
         # at 0.
@@ -73,13 +73,5 @@ class SimpleLaTeXConfigWidget(object):
         self._settings.set_boolean("auto-open-pdf", check_button.get_active())
     def set_command_line(self,entry):
         self._settings.set_string("commandline-options", entry.get_text())
-    def set_defaut_engine(self,combobox):
+    def set_engine_option(self,combobox):
         self._settings.set_enum("select-default-engine", combobox.get_active()+1)
-    def set_engine_opts(self,combobox):
-        pass
-
-        
-    def change_engine_opts(self,combobox,textbox):
-        engine = combobox.get_active_text()
-        engine_options = self._settings.get_string(engine+'-opts')
-        textbox.set_text(engine_options)
