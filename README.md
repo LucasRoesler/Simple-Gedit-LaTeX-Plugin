@@ -26,6 +26,11 @@ Current Features
 * Compile the current tex document using `<Ctrl>t`
 * Auto-open the pdf when a tex document is open
 * Auto-close the pdf when the tex document is closed
+* Run Bibtex and MakeIndex on the current file
+
+Dependencies 
+============
+* Rubber - https://launchpad.net/rubber - this allows us to easily process the tex log file.
 
 Installation
 ============
